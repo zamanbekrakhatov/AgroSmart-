@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "5AHXdXDW-uy2l6H7T3Qm9"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "Agricultural app icon"

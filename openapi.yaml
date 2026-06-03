@@ -1,0 +1,802 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: AGROSMART Intelligent Irrigation System API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: zones
+    description: Zone operations
+  - name: sensors
+    description: Sensor management
+  - name: pump
+    description: Pump control
+  - name: messages
+    description: SMS messages
+  - name: chat
+    description: AI chat
+  - name: statistics
+    description: Statistics and analytics
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /zones:
+    get:
+      operationId: getZones
+      tags: [zones]
+      summary: Get all zones
+      responses:
+        "200":
+          description: List of zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Zone"
+
+  /zones/{zoneId}:
+    get:
+      operationId: getZone
+      tags: [zones]
+      summary: Get zone details
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Zone details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Zone"
+        "404":
+          description: Zone not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /zones/{zoneId}/parameters:
+    put:
+      operationId: updateZoneParameters
+      tags: [zones]
+      summary: Update zone sensor parameters (admin only)
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZoneParameterInput"
+      responses:
+        "200":
+          description: Updated zone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Zone"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /zones/{zoneId}/base:
+    put:
+      operationId: updateZoneBase
+      tags: [zones]
+      summary: Update zone base irrigation (user)
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZoneBaseInput"
+      responses:
+        "200":
+          description: Updated zone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Zone"
+
+  /zones/{zoneId}/calculation:
+    get:
+      operationId: getZoneCalculation
+      tags: [zones]
+      summary: Get irrigation calculation for zone
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Calculation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Calculation"
+
+  /zones/{zoneId}/sensors:
+    get:
+      operationId: getZoneSensors
+      tags: [sensors]
+      summary: Get sensor statuses for zone
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sensor statuses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SensorStatus"
+
+  /zones/{zoneId}/sensors/{sensorType}:
+    put:
+      operationId: updateSensorStatus
+      tags: [sensors]
+      summary: Enable/disable sensor (admin only)
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sensorType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [soil, temp, hum, rain, wind]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SensorStatusInput"
+      responses:
+        "200":
+          description: Updated sensor status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensorStatus"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /zones/{zoneId}/pump:
+    get:
+      operationId: getPumpStatus
+      tags: [pump]
+      summary: Get pump status for zone
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pump status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PumpStatus"
+
+  /zones/{zoneId}/pump/confirm:
+    post:
+      operationId: confirmPump
+      tags: [pump]
+      summary: User confirms pump activation
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PumpConfirmInput"
+      responses:
+        "200":
+          description: Pump action result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PumpStatus"
+
+  /messages:
+    get:
+      operationId: getMessages
+      tags: [messages]
+      summary: Get SMS messages for current user's zone
+      responses:
+        "200":
+          description: Messages list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+
+  /messages/unread-count:
+    get:
+      operationId: getUnreadMessageCount
+      tags: [messages]
+      summary: Get unread message count
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+
+  /chat:
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send message to AI chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessageInput"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+
+  /chat/history:
+    get:
+      operationId: getChatHistory
+      tags: [chat]
+      summary: Get chat history for current session
+      responses:
+        "200":
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatEntry"
+
+  /statistics/{zoneId}/{period}:
+    get:
+      operationId: fetchZoneStatistics
+      tags: [statistics]
+      summary: Get statistics for zone by period
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: period
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [day, week, month]
+      responses:
+        "200":
+          description: Statistics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Statistics"
+
+  /statistics/summary:
+    get:
+      operationId: getStatisticsSummary
+      tags: [statistics]
+      summary: Get statistics summary across all zones
+      responses:
+        "200":
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatisticsSummary"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    LoginInput:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string
+          enum: [admin, user]
+        zoneId:
+          type: ["string", "null"]
+        zoneName:
+          type: ["string", "null"]
+      required:
+        - id
+        - username
+        - role
+        - zoneId
+        - zoneName
+
+    Zone:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        areaHa:
+          type: number
+        soil:
+          type: ["number", "null"]
+        temp:
+          type: ["number", "null"]
+        hum:
+          type: ["number", "null"]
+        rain:
+          type: ["number", "null"]
+        wind:
+          type: ["number", "null"]
+        baseMm:
+          type: number
+        soilOnline:
+          type: boolean
+        tempOnline:
+          type: boolean
+        humOnline:
+          type: boolean
+        rainOnline:
+          type: boolean
+        windOnline:
+          type: boolean
+        pumpActive:
+          type: boolean
+        lastUpdated:
+          type: string
+      required:
+        - id
+        - name
+        - areaHa
+        - soil
+        - temp
+        - hum
+        - rain
+        - wind
+        - baseMm
+        - soilOnline
+        - tempOnline
+        - humOnline
+        - rainOnline
+        - windOnline
+        - pumpActive
+        - lastUpdated
+
+    ZoneParameterInput:
+      type: object
+      properties:
+        soil:
+          type: number
+        temp:
+          type: number
+        hum:
+          type: number
+        rain:
+          type: number
+        wind:
+          type: number
+
+    ZoneBaseInput:
+      type: object
+      properties:
+        baseMm:
+          type: number
+          minimum: 5
+          maximum: 30
+      required:
+        - baseMm
+
+    Calculation:
+      type: object
+      properties:
+        zoneId:
+          type: string
+        needM3:
+          type: number
+        rainM3:
+          type: number
+        deficitM3:
+          type: number
+        pumpTimeHours:
+          type: number
+        pumpTimeFormatted:
+          type: string
+        canIrrigate:
+          type: boolean
+        blockedReason:
+          type: ["string", "null"]
+      required:
+        - zoneId
+        - needM3
+        - rainM3
+        - deficitM3
+        - pumpTimeHours
+        - pumpTimeFormatted
+        - canIrrigate
+        - blockedReason
+
+    SensorStatus:
+      type: object
+      properties:
+        zoneId:
+          type: string
+        sensorType:
+          type: string
+          enum: [soil, temp, hum, rain, wind]
+        online:
+          type: boolean
+        disabledAt:
+          type: ["string", "null"]
+        disabledBy:
+          type: ["string", "null"]
+      required:
+        - zoneId
+        - sensorType
+        - online
+        - disabledAt
+        - disabledBy
+
+    SensorStatusInput:
+      type: object
+      properties:
+        online:
+          type: boolean
+      required:
+        - online
+
+    PumpStatus:
+      type: object
+      properties:
+        zoneId:
+          type: string
+        active:
+          type: boolean
+        startedAt:
+          type: ["string", "null"]
+        waterM3:
+          type: ["number", "null"]
+        pumpTimeFormatted:
+          type: ["string", "null"]
+        waitingConfirmation:
+          type: boolean
+      required:
+        - zoneId
+        - active
+        - startedAt
+        - waterM3
+        - pumpTimeFormatted
+        - waitingConfirmation
+
+    PumpConfirmInput:
+      type: object
+      properties:
+        confirmed:
+          type: boolean
+      required:
+        - confirmed
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        zoneId:
+          type: string
+        type:
+          type: string
+          enum: [irrigation_needed, pump_started, field_full, sensor_offline, parameters_normal]
+        title:
+          type: string
+        body:
+          type: string
+        read:
+          type: boolean
+        createdAt:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - zoneId
+        - type
+        - title
+        - body
+        - read
+        - createdAt
+        - metadata
+
+    UnreadCount:
+      type: object
+      properties:
+        count:
+          type: integer
+      required:
+        - count
+
+    ChatMessageInput:
+      type: object
+      properties:
+        message:
+          type: string
+        zoneId:
+          type: ["string", "null"]
+      required:
+        - message
+        - zoneId
+
+    ChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+        timestamp:
+          type: string
+      required:
+        - reply
+        - timestamp
+
+    ChatEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - role
+        - content
+        - createdAt
+
+    StatisticsPoint:
+      type: object
+      properties:
+        label:
+          type: string
+        soil:
+          type: number
+        temp:
+          type: number
+        hum:
+          type: number
+        waterUsed:
+          type: number
+      required:
+        - label
+        - soil
+        - temp
+        - hum
+        - waterUsed
+
+    Statistics:
+      type: object
+      properties:
+        zoneId:
+          type: string
+        period:
+          type: string
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatisticsPoint"
+        totalWaterUsed:
+          type: number
+        avgSoil:
+          type: number
+        avgTemp:
+          type: number
+        irrigationCount:
+          type: integer
+      required:
+        - zoneId
+        - period
+        - points
+        - totalWaterUsed
+        - avgSoil
+        - avgTemp
+        - irrigationCount
+
+    ZoneSummary:
+      type: object
+      properties:
+        zoneId:
+          type: string
+        zoneName:
+          type: string
+        totalWaterUsed:
+          type: number
+        irrigationCount:
+          type: integer
+        avgSoil:
+          type: number
+      required:
+        - zoneId
+        - zoneName
+        - totalWaterUsed
+        - irrigationCount
+        - avgSoil
+
+    StatisticsSummary:
+      type: object
+      properties:
+        totalWaterUsedAllZones:
+          type: number
+        totalIrrigations:
+          type: integer
+        zones:
+          type: array
+          items:
+            $ref: "#/components/schemas/ZoneSummary"
+      required:
+        - totalWaterUsedAllZones
+        - totalIrrigations
+        - zones
